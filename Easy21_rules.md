@@ -1,4 +1,4 @@
-Easy21 is a modification of `BlaskJack` proposed by David Silver at his RL course at the University College of London. The particulariries of this variants are:
+Easy21 is a modification of `BlackJack` proposed by David Silver at his RL course at the University College of London. The particulariries of this variants are:
 
 - The deck is infinite (there can be repeated cards).
 - Each time you draw a card, it can be a number between 1 and 10. And 2 out of three times the card will be black, red otherwise.
