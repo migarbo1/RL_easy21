@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import IntEnum
 import random
 import math
 import copy
 
-class Actions(Enum):
+class Actions(IntEnum):
     STICK = 0,
     HIT = 1
 
