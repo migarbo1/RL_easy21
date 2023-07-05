@@ -86,8 +86,8 @@ def plot_q():
     ax.plot_surface(x, y, aux, rstride=1, cstride=1,
                     cmap='viridis')
     ax.set_title('easy 21')
-    plt.savefig('MC_control')
+    plt.savefig('MC_control_50k')
 
 if __name__ == '__main__':
-    monte_carlo_control(5000000)
+    monte_carlo_control(50000)
     plot_q()

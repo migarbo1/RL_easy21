@@ -7,8 +7,9 @@ import random
 N_0 = 100
 N_sa = np.zeros((10,21,2))
 Q_sa = np.zeros((10,21,2))
+E_sa = np.zeros((10,21,2))
 actions = [env.Actions.HIT, env.Actions.STICK]
-gamma = 0.9
+gamma = 1
 
 def get_epsilon(state):
     n_st = np.sum(N_sa[state.broker_hand - 1][state.player_hand - 1])
@@ -19,7 +20,6 @@ def get_alpha(state, action):
     return 1/n_sta
 
 def update_N(state, action):
-    #N_sa[state.broker_hand - 1][state.player_hand - 1] += 1
     N_sa[state.broker_hand - 1][state.player_hand - 1][int(action)] += 1
 
 def select_action(state):
@@ -40,40 +40,51 @@ def get_argmax_q_value(state):
             argmax = action
     return argmax
 
-def SARSA_control(num_episodes, lamda, m1):
+def SARSA_control(num_episodes, lamb, m1):
     i = 0
     environment = env.Easy21Environment()
     mse_over_episodes = []
     while i < num_episodes:
-        
-        E_sa = np.zeros((10,21,2))
+
+        #initialize S
         st = env.State(environment.draw(black_only=True), environment.draw(black_only=True))
-        
+        #choose action for selected S
         act = select_action(st)
+        E_sa = np.zeros((10,21,2))
+
         while not st.is_terminal:
             
+            #take action and observe Reward and New state
             st_, reward = environment.step(st, act)
-            update_N(st, act)
-
-            E_sa[st.broker_hand - 1][st.player_hand - 1][int(act)] += 1
+            
+            #choose new action from derived new state
             if not st_.is_terminal:
                 act_ = select_action(st_)
+                update_N(st, act)
                 delta = reward + gamma * Q_sa[st_.broker_hand - 1][st_.player_hand - 1][int(act_)] - Q_sa[st.broker_hand - 1][st.player_hand - 1][int(act)]
+                E_sa[st.broker_hand - 1][st.player_hand - 1][int(act)] += 1
+                for bh in range(10):
+                    for ph in range(21):
+                        for action in actions:
+                            Q_sa[bh][ph][int(action)] += get_alpha(st, act) * delta * E_sa[bh][ph][int(action)]
+                            E_sa[bh][ph][int(action)] *= lamb
+                act = act_
             else:
-                act_ = None
+                update_N(st, act)
                 delta = reward - Q_sa[st.broker_hand - 1][st.player_hand - 1][int(act)]
-
-            for bh in range(10):
-                for ph in range(21):
-                    for action in actions:
-                        Q_sa[bh][ph][int(action)] += get_alpha(st, act) * delta * E_sa[bh][ph][int(action)]
-                        E_sa[bh][ph][int(action)] = gamma * lamda * E_sa[bh][ph][int(action)]
+                E_sa[st.broker_hand - 1][st.player_hand - 1][int(act)] += 1
+                for bh in range(10):
+                    for ph in range(21):
+                        for action in actions:
+                            Q_sa[bh][ph][int(action)] += get_alpha(st, act) * delta * E_sa[bh][ph][int(action)]
+                            E_sa[bh][ph][int(action)] *= lamb
+                act = None
 
             st = st_
-            act = act_
         i += 1
         mse_over_episodes.append(mse(m1, Q_sa))
     return mse_over_episodes
+
 
 def mse(m1, m2):
     res = 0
@@ -81,7 +92,6 @@ def mse(m1, m2):
         for j in range(21):
             for action in actions:
                 res += pow(m1[i][j][int(action)] - m2[i][j][int(action)],2)
-
     return res
 
 def plot_q(q):
@@ -103,7 +113,7 @@ def plot_q(q):
     ax.plot_surface(x, y, aux, rstride=1, cstride=1,
                     cmap='viridis')
     ax.set_title('easy 21')
-    plt.savefig('SARSA_control')
+    plt.savefig('SARSA_lambda_control')
 
 def plot_sarsa(mse_list, mse_progressions):
     plt.clf()
@@ -121,20 +131,18 @@ def plot_sarsa(mse_list, mse_progressions):
     plt.savefig('sarsa_mse_ev_over_episodes')
 
 if __name__ == '__main__':
-    mc.monte_carlo_control(1000)
-    m1 = mc.Q_sa
+    mc.monte_carlo_control(50000)
+    Qsa_mc = mc.Q_sa
+
     mse_list = []
-    mse_progressions = []
-    min_sme = np.inf
-    argmin_sme = 0
-    for l in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]:
+    mse_progs = []
+
+    for lam in [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]:
         Q_sa = np.zeros((10,21,2))
-        local_mse = SARSA_control(1000, l, m1)
-        if local_mse[-1] < min_sme:
-            argmin_sme = Q_sa
-        mse_list.append(mse(m1, Q_sa))
-        if l == 0 or l == 1:
-            mse_progressions.append(local_mse)
-    print(mse_list)
-    plot_q(argmin_sme)
-    plot_sarsa(mse_list, mse_progressions)
+        N_sa = np.zeros((10,21,2))
+        local_mse = SARSA_control(50000, lam, Qsa_mc)
+        mse_list.append(mse(Q_sa, Qsa_mc))
+        if lam == 0 or lam == 1:
+            mse_progs.append(local_mse)
+    plot_q(Q_sa)
+    plot_sarsa(mse_list, mse_progs)
