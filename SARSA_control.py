@@ -8,7 +8,6 @@ N_0 = 100
 N_sa = np.zeros((10,21,2))
 Q_sa = np.zeros((10,21,2))
 actions = [env.Actions.HIT, env.Actions.STICK]
-gamma = 0.9
 
 def get_epsilon(state):
     n_st = np.sum(N_sa[state.broker_hand - 1][state.player_hand - 1])
@@ -69,15 +68,6 @@ def SARSA_control(num_episodes):
             st = st_
 
         i += 1
-
-def mse(m1, m2):
-    res = 0
-    for i in range(10):
-        for j in range(21):
-            for action in actions:
-                res += pow(m1[i][j][int(action)] - m2[i][j][int(action)],2)
-
-    return res
 
 def plot_q(q):
     plt.clf()
